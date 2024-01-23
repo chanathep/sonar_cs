@@ -1,48 +1,21 @@
-# sonar_cs
-
-```
-dotnet new console -o HelloWorld
-```
-
-.gitignore
-```
-bin/
-Bin/
-obj/
-Obj/
-```
-
-sonar-project.properties
-```
-sonar.projectKey=<your project key>
-sonar.sources=.
-```
-
-.github\worlflows\sonarqube.yml
-```
 on:
-  # Trigger analysis when pushing to your main branches, and when creating a pull request.
   push:
-    branches:
-      - main
-      - master
-      - develop
-      - 'releases/**'
-  pull_request:
-    types: [opened, synchronize, reopened]
+    branches: [main]
 name: SonarQube Scan
 jobs:
   sonarqube:
-    runs-on: ubuntu-latest
+    # runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           # Disabling shallow clones is recommended for improving the relevancy of reporting
           fetch-depth: 0
       - name: Setup dotnet
         uses: actions/setup-dotnet@v1
         with:
-          dotnet-version: '5.0.x'
+          dotnet-version: '6.0.x'
+          # dotnet-version: '5.0.x'
       - name: Install dependencies
         run: dotnet restore
       - name: SonarQube Scan
@@ -60,4 +33,3 @@ jobs:
         run: dotnet sonarscanner end /d:sonar.login="${{ secrets.SONAR_TOKEN }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-```
