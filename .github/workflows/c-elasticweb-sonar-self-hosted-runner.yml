@@ -1,0 +1,66 @@
+name: c-elasticweb-sonar-self-hosted-runner
+
+on:
+  push:
+    # branches: [ main ]
+    branches: [ develop ]
+    tags:
+      - 'selfhostedsonar-*'
+
+env:
+  SONAR_PROJECT_KEY: c-elasticweb
+  DOTNET_PROJECT_PATH: C.ElasticWeb/C.ElasticWeb.csproj
+
+jobs:
+  sonarQubeTrigger-elasticweb:
+    name: SonarQube-elasticweb
+    # if: startsWith(github.ref, 'refs/tags/')
+    if: startsWith(github.ref, 'refs/tags/') && false
+    # runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64]
+    steps:
+
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.TOKEN_KEY }}
+          submodules: "recursive"
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: freewill.azurecr.io
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: SonarScanner for .NET 6 with pull request decoration support
+        uses: highbyte/sonarscan-dotnet@v2.1.5
+        # for .NET 6
+        # uses: highbyte/sonarscan-dotnet@v2.3.1
+        # for .NET 8
+        with:
+          sonarProjectKey: ${{ env.SONAR_PROJECT_KEY }}.net
+          sonarProjectName: ${{ env.SONAR_PROJECT_KEY }}.net
+          dotnetBuildArguments: ${{ env.DOTNET_PROJECT_PATH }}
+          sonarHostname: ${{ secrets.SONARQUBE_HOST }}
+        env:
+          SONAR_TOKEN: ${{ secrets.SONARQUBE_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.TOKEN_KEY }}
+
+      - uses: philips-software/sonar-scanner-action@v1.5.1
+        with:
+          token: ${{ secrets.SONARQUBE_TOKEN }}
+          projectName: ${{ env.SONAR_PROJECT_KEY }}.web
+          projectKey: ${{ env.SONAR_PROJECT_KEY }}.web
+          url: ${{ secrets.SONARQUBE_HOST }}
+          isCommunityEdition: true
+
+      - name: Send a success message to Microsoft Teams
+        uses: aliencube/microsoft-teams-actions@v0.8.0
+        with:
+          webhook_uri: ${{ secrets.MS_TEAMS_WEBHOOK_URI }}
+          title: Run sonarqube on ${{ env.SONAR_PROJECT_KEY }}.net & .web '#${{ github.run_number }}' Success
+          theme_color: "FF0000"
+          text: |
+            <b>By :</b> <span style="font-weight:bold;color:#0000FF">${{ github.actor }}</span> <br> <b>On :</b> ${{ github.repository }} <br>
+            <b>Event Type :</b> ${{ github.event_name }} <br> <b>Commit Message :</b> <span style="font-weight:bold;color:#0000FF">${{ github.event.head_commit.message }}</span> <br>
+            <b>Commit :</b> ${{ github.sha }}
